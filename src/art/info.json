@@ -1,0 +1,14 @@
+{
+  "_default": {
+    "artist": "Gabby Burgard",
+    "availability": "Not available",
+    "price": ""
+  },
+  "example-file-name.png": {
+    "title": "Example Title",
+    "artist": "Your Name",
+    "availability": "Print available at yourshop.com",
+    "price": "$25",
+    "link": "https://example.com"
+  }
+}
