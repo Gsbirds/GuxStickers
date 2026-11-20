@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { artBounds, buildEyes, loadPieces, roamBounds } from "./layout.js";
+import { loadPieces } from "./art.js";
+import { buildEyes, roamBounds } from "./layout.js";
+import { centerOn, clampView, fitView, fitZoom, MIN_ZOOM, zoomAt } from "./view.js";
 // import Tentacles from "./components/Tentacles.jsx";
 import Eyes from "./components/Eyes.jsx";
 import { AboutPage, ArtPage, Copyright } from "./components/Pages.jsx";
 
-const MIN_ZOOM = 0.15;
-const MAX_ZOOM = 2.5;
-const MIN_START_ZOOM = 0.15;
 const DRAG_THRESHOLD = 6;
 const PARALLAX = 0.15;
+const KEY_PAN = 120;
+const KEY_ZOOM = 1.2;
+
+const screen = () => ({ w: window.innerWidth, h: window.innerHeight });
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash);
@@ -18,42 +21,6 @@ function useHash() {
     return () => window.removeEventListener("hashchange", update);
   }, []);
   return [hash, setHash];
-}
-
-function fitView(pieces) {
-  const b = artBounds(pieces);
-  const bw = b.x2 - b.x1;
-  const bh = b.y2 - b.y1;
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  const z = Math.min(1, Math.max(MIN_START_ZOOM, Math.min((W * 0.94) / bw, (H * 0.8) / bh)));
-  return {
-    z,
-    x: W / 2 - (b.x1 + bw / 2) * z,
-    y: H / 2 - (b.y1 + bh / 2) * z,
-  };
-}
-
-// Smallest zoom where the whole eye area still fits on screen.
-function fitZoom(b) {
-  return Math.min(window.innerWidth / (b.x2 - b.x1), window.innerHeight / (b.y2 - b.y1));
-}
-
-// Keeps the edges of the eye area from being dragged past the screen edges.
-// If the area is narrower than the screen on an axis, it stays centered.
-function clampAxis(offset, z, lo, hi, screen) {
-  const span = (hi - lo) * z;
-  if (span <= screen) return screen / 2 - ((lo + hi) / 2) * z;
-  return Math.min(-lo * z, Math.max(screen - hi * z, offset));
-}
-
-function clampView(v, b) {
-  if (!b) return v;
-  return {
-    z: v.z,
-    x: clampAxis(v.x, v.z, b.x1, b.x2, window.innerWidth),
-    y: clampAxis(v.y, v.z, b.y1, b.y2, window.innerHeight),
-  };
 }
 
 export default function App() {
@@ -67,6 +34,7 @@ export default function App() {
   const drag = useRef(null);
   const dragged = useRef(false);
   const mouse = useRef(null);
+  const returnFocus = useRef(null);
 
   const [hash, setHash] = useHash();
   const activePiece = useMemo(() => {
@@ -86,10 +54,10 @@ export default function App() {
     setHash("");
   };
 
-  const applyView = () => {
+  const applyView = (next = view.current) => {
     const world = worldRef.current;
     if (!world) return;
-    view.current = clampView(view.current, bounds);
+    view.current = clampView(next, bounds, screen());
     const { x, y, z } = view.current;
     world.style.transform = `translate(${x}px, ${y}px) scale(${z})`;
     for (const el of world.querySelectorAll("[data-depth]")) {
@@ -99,39 +67,66 @@ export default function App() {
     }
   };
 
+  const zoomBy = (factor, cx, cy) => {
+    const minZoom = Math.max(MIN_ZOOM, fitZoom(bounds, screen()));
+    applyView(zoomAt(view.current, factor, cx, cy, minZoom));
+  };
+
   useEffect(() => {
     if (!pieces.length) return;
-    const fit = () => {
-      view.current = fitView(pieces);
-      applyView();
-    };
+    const fit = () => applyView(fitView(pieces, screen()));
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, [pieces]);
 
+  // Remember what opened a page, and put focus back there when it closes.
+  useEffect(() => {
+    if (pageOpen) {
+      returnFocus.current = document.activeElement;
+    } else if (returnFocus.current?.isConnected) {
+      returnFocus.current.focus({ preventScroll: true });
+      returnFocus.current = null;
+    }
+  }, [pageOpen]);
+
   useEffect(() => {
     const onWheel = (e) => {
       if (pageOpen) return;
       e.preventDefault();
-      const v = view.current;
-      const minZoom = Math.max(MIN_ZOOM, fitZoom(bounds));
-      const z = Math.min(MAX_ZOOM, Math.max(minZoom, v.z * Math.exp(-e.deltaY * 0.0015)));
-      v.x = e.clientX - ((e.clientX - v.x) / v.z) * z;
-      v.y = e.clientY - ((e.clientY - v.y) / v.z) * z;
-      v.z = z;
-      applyView();
+      zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
     };
+
     const onKey = (e) => {
-      if (e.key === "Escape") goHome();
+      if (e.key === "Escape") return goHome();
+      if (pageOpen || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      const { w, h } = screen();
+      const v = view.current;
+      const pan = { ArrowLeft: [KEY_PAN, 0], ArrowRight: [-KEY_PAN, 0], ArrowUp: [0, KEY_PAN], ArrowDown: [0, -KEY_PAN] };
+
+      if (pan[e.key]) {
+        const [dx, dy] = pan[e.key];
+        applyView({ ...v, x: v.x + dx, y: v.y + dy });
+      } else if (e.key === "+" || e.key === "=") {
+        zoomBy(KEY_ZOOM, w / 2, h / 2);
+      } else if (e.key === "-" || e.key === "_") {
+        zoomBy(1 / KEY_ZOOM, w / 2, h / 2);
+      } else if (e.key === "0") {
+        applyView(fitView(pieces, screen()));
+      } else {
+        return;
+      }
+      e.preventDefault();
     };
+
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
     };
-  }, [pageOpen]);
+  }, [pageOpen, pieces, bounds]);
 
   const onPointerDown = (e) => {
     drag.current = { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY };
@@ -151,19 +146,27 @@ export default function App() {
       // Capturing on press instead would steal the click from the art.
       e.currentTarget.setPointerCapture(e.pointerId);
     }
-    view.current.x += e.clientX - d.x;
-    view.current.y += e.clientY - d.y;
+    const v = view.current;
+    applyView({ ...v, x: v.x + e.clientX - d.x, y: v.y + e.clientY - d.y });
     d.x = e.clientX;
     d.y = e.clientY;
-    applyView();
   };
 
   const onPointerUp = () => {
     drag.current = null;
   };
 
-  const openPiece = (piece) => {
-    if (!dragged.current) window.location.hash = "#/art/" + encodeURIComponent(piece.slug);
+  // A drag that ends on a piece shouldn't open it.
+  const onPieceClick = (e) => {
+    if (dragged.current) e.preventDefault();
+  };
+
+  // Tabbing to a piece that's off screen pans it into view. Mouse clicks also
+  // focus links, so only do this for keyboard focus.
+  const onPieceFocus = (e, piece) => {
+    if (e.currentTarget.matches(":focus-visible")) {
+      applyView(centerOn(view.current, piece, screen()));
+    }
   };
 
   if (!pieces.length) {
@@ -182,12 +185,13 @@ export default function App() {
       <div
         className={pageOpen ? "stage paused" : "stage"}
         ref={stageRef}
+        inert={pageOpen}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <svg width="0" height="0" style={{ position: "absolute" }}>
+        <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
           <filter id="squirm" x="-10%" y="-10%" width="120%" height="120%">
             <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="3" result="noise">
               <animate
@@ -205,6 +209,8 @@ export default function App() {
         <div className="spotlight" />
         <div className="scanlines" />
 
+        <h1 className="visually-hidden">Gux Stickers gallery</h1>
+
         <div className="world" ref={worldRef}>
           <Eyes eyes={eyes} mouse={mouse} view={view} paused={pageOpen} />
           {pieces.map((p) => (
@@ -220,10 +226,17 @@ export default function App() {
                 "--h": p.hue,
                 "--fd": `${p.floatDelay}s`,
               }}
-              onClick={() => openPiece(p)}
             >
-              <img src={p.thumb} alt={p.name} draggable={false} decoding="async" />
-              <figcaption>{p.name}</figcaption>
+              <a
+                className="piece-link"
+                href={"#/art/" + encodeURIComponent(p.slug)}
+                draggable={false}
+                onClick={onPieceClick}
+                onFocus={(e) => onPieceFocus(e, p)}
+              >
+                <img src={p.thumb} alt={p.name} draggable={false} decoding="async" />
+              </a>
+              <figcaption aria-hidden="true">{p.name}</figcaption>
             </figure>
           ))}
         </div>

@@ -1,18 +1,3 @@
-import info from "./art/info.json";
-
-const originals = import.meta.glob("./art/*.{png,PNG}", {
-  eager: true,
-  query: "?url",
-  import: "default",
-});
-
-// The originals are ~3300px wide, far more than the gallery needs.
-const thumbs = import.meta.glob("./art/*.{png,PNG}", {
-  eager: true,
-  query: "?w=900&format=webp",
-  import: "default",
-});
-
 export const HUES = [310, 150, 185, 55, 335, 270, 20, 95];
 const CELL = 700;
 const PIECE_WIDTH = 400;
@@ -30,13 +15,14 @@ function rng(seed) {
   };
 }
 
-const COLUMNS = 7;
+export const COLUMNS = 7;
 
 function gridColumns(n) {
   return Math.max(1, Math.min(n, COLUMNS));
 }
 
-export function loadPieces() {
+// originals and thumbs map file paths to image URLs. info is src/art/info.json.
+export function layoutPieces(originals, thumbs = {}, info = {}) {
   const files = Object.entries(originals).sort(([a], [b]) => a.localeCompare(b));
   const cols = gridColumns(files.length);
 

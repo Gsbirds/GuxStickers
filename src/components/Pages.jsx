@@ -12,10 +12,17 @@ export function Copyright() {
   );
 }
 
-function Page({ hue, onBack, onBackdropClick, children }) {
+function Page({ hue, label, onBack, onBackdropClick, children }) {
   return (
-    <div className="page" style={{ "--h": hue }} onClick={onBackdropClick}>
-      <button type="button" className="back" onClick={onBack}>
+    <div
+      className="page"
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      style={{ "--h": hue }}
+      onClick={onBackdropClick}
+    >
+      <button type="button" className="back" onClick={onBack} autoFocus>
         ← back to the gallery
       </button>
       {children}
@@ -37,7 +44,7 @@ export function ArtPage({ piece, onBack }) {
   };
 
   return (
-    <Page hue={hue} onBack={onBack} onBackdropClick={closeOnBackdrop}>
+    <Page hue={hue} label={name} onBack={onBack} onBackdropClick={closeOnBackdrop}>
       <div className="art-layout" onClick={closeOnBackdrop}>
         <img className="art-image" src={src} alt={name} />
         <div className="art-info">
@@ -70,7 +77,7 @@ export function ArtPage({ piece, onBack }) {
 
 export function AboutPage({ onBack }) {
   return (
-    <Page hue={270} onBack={onBack}>
+    <Page hue={270} label="About" onBack={onBack}>
       <div className="about">
         <p className="about-kicker">about me</p>
         <h1>{ARTIST.name}</h1>

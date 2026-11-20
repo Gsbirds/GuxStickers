@@ -116,7 +116,8 @@ body {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-14px); }
 }
-.piece:hover {
+.piece:hover,
+.piece:has(.piece-link:focus-visible) {
   scale: 2;
   transform-origin: center;
   rotate: 0deg;
@@ -126,7 +127,15 @@ body {
     drop-shadow(0 0 10px hsl(var(--h) 100% 65%))
     drop-shadow(0 0 50px hsl(var(--h) 100% 55% / 0.9));
 }
-.piece:hover img { animation: glitch 0.5s steps(2) infinite; }
+.piece:hover img,
+.piece-link:focus-visible img { animation: glitch 0.5s steps(2) infinite; }
+.piece-link {
+  display: block;
+  cursor: pointer;
+  border-radius: 4px;
+  -webkit-user-drag: none;
+}
+.piece-link:focus { outline: none; }
 @keyframes glitch {
   0%   { transform: translate(0); }
   25%  { transform: translate(-3px, 1px); }
@@ -150,7 +159,27 @@ body {
   opacity: 0;
   transition: opacity 0.3s;
 }
-.piece:hover figcaption { opacity: 1; }
+.piece:hover figcaption,
+.piece:has(.piece-link:focus-visible) figcaption { opacity: 1; }
+
+/* Visible keyboard focus everywhere. Mouse clicks don't trigger :focus-visible. */
+.nav-about:focus-visible,
+.back:focus-visible,
+.buy:focus-visible,
+.about-links a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 .gallery-footer {
   position: absolute;
