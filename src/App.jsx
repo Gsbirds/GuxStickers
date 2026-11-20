@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { artBounds, buildEyes, loadPieces } from "./layout.js";
+import { artBounds, buildEyes, loadPieces, roamBounds } from "./layout.js";
 // import Tentacles from "./components/Tentacles.jsx";
 import Eyes from "./components/Eyes.jsx";
 import { AboutPage, ArtPage, Copyright } from "./components/Pages.jsx";
@@ -34,9 +34,32 @@ function fitView(pieces) {
   };
 }
 
+// Smallest zoom where the whole eye area still fits on screen.
+function fitZoom(b) {
+  return Math.min(window.innerWidth / (b.x2 - b.x1), window.innerHeight / (b.y2 - b.y1));
+}
+
+// Keeps the edges of the eye area from being dragged past the screen edges.
+// If the area is narrower than the screen on an axis, it stays centered.
+function clampAxis(offset, z, lo, hi, screen) {
+  const span = (hi - lo) * z;
+  if (span <= screen) return screen / 2 - ((lo + hi) / 2) * z;
+  return Math.min(-lo * z, Math.max(screen - hi * z, offset));
+}
+
+function clampView(v, b) {
+  if (!b) return v;
+  return {
+    z: v.z,
+    x: clampAxis(v.x, v.z, b.x1, b.x2, window.innerWidth),
+    y: clampAxis(v.y, v.z, b.y1, b.y2, window.innerHeight),
+  };
+}
+
 export default function App() {
   const pieces = useMemo(loadPieces, []);
   const eyes = useMemo(() => buildEyes(pieces), [pieces]);
+  const bounds = useMemo(() => pieces.length && roamBounds(pieces), [pieces]);
 
   const stageRef = useRef(null);
   const worldRef = useRef(null);
@@ -66,6 +89,7 @@ export default function App() {
   const applyView = () => {
     const world = worldRef.current;
     if (!world) return;
+    view.current = clampView(view.current, bounds);
     const { x, y, z } = view.current;
     world.style.transform = `translate(${x}px, ${y}px) scale(${z})`;
     for (const el of world.querySelectorAll("[data-depth]")) {
@@ -91,7 +115,8 @@ export default function App() {
       if (pageOpen) return;
       e.preventDefault();
       const v = view.current;
-      const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.z * Math.exp(-e.deltaY * 0.0015)));
+      const minZoom = Math.max(MIN_ZOOM, fitZoom(bounds));
+      const z = Math.min(MAX_ZOOM, Math.max(minZoom, v.z * Math.exp(-e.deltaY * 0.0015)));
       v.x = e.clientX - ((e.clientX - v.x) / v.z) * z;
       v.y = e.clientY - ((e.clientY - v.y) / v.z) * z;
       v.z = z;

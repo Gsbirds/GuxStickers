@@ -170,10 +170,26 @@ body {
   font-size: 11px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: #7dffd0;
-  text-shadow: 0 0 8px #00ffa0;
-  opacity: 0.7;
+  color: #b6ffe6;
+  text-shadow:
+    0 0 2px #000,
+    0 0 6px #00ffa0,
+    0 0 14px #00ffa0;
   pointer-events: none;
+}
+.gallery-footer .hint,
+.gallery-footer .copyright {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(4, 0, 10, 0.75);
+  box-shadow: 0 0 16px rgba(4, 0, 10, 0.9);
+  opacity: 1;
+}
+.gallery-footer .copyright {
+  color: #e9dcff;
+  text-shadow:
+    0 0 2px #000,
+    0 0 8px #b400ff;
 }
 
 /* ---------- art and about pages ---------- */
@@ -267,6 +283,11 @@ body {
   box-shadow: 0 0 24px hsl(var(--h) 100% 60% / 0.8);
 }
 .buy:hover { background: #fff; }
+.shops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
 @media (max-width: 760px) {
   .art-layout { grid-template-columns: 1fr; gap: 32px; }
 }

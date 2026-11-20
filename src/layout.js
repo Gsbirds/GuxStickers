@@ -15,6 +15,7 @@ const thumbs = import.meta.glob("./art/*.{png,PNG}", {
 
 export const HUES = [310, 150, 185, 55, 335, 270, 20, 95];
 const CELL = 700;
+const PIECE_WIDTH = 400;
 
 const EYE_COUNT = 70;
 const EYE_ART_MARGIN = 70;
@@ -53,7 +54,7 @@ export function loadPieces() {
       meta,
       x: (i % cols) * CELL + (r() - 0.5) * 180,
       y: Math.floor(i / cols) * CELL + (r() - 0.5) * 180,
-      w: 260 + r() * 160,
+      w: PIECE_WIDTH,
       rot: (r() - 0.5) * 8,
       depth: 0.7 + r() * 0.6,
       hue: HUES[i % HUES.length],
@@ -75,6 +76,27 @@ export function artBounds(pieces) {
 
 const overlaps = (a, b) => a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
 
+function eyeArea(art) {
+  return {
+    x1: Math.min(...art.map((b) => b.x1)) - CELL * 1.6,
+    x2: Math.max(...art.map((b) => b.x2)) + CELL * 1.6,
+    y1: Math.min(...art.map((b) => b.y1)) - CELL * 0.6,
+    y2: Math.max(...art.map((b) => b.y2)) + CELL * 0.6,
+  };
+}
+
+// The region the eyes fill. Panning is kept inside it.
+export function roamBounds(pieces) {
+  return eyeArea(
+    pieces.map((p) => ({
+      x1: p.x - EYE_ART_MARGIN,
+      y1: p.y - EYE_ART_MARGIN,
+      x2: p.x + p.w + EYE_ART_MARGIN,
+      y2: p.y + p.w * 1.3 + EYE_ART_MARGIN,
+    }))
+  );
+}
+
 // Scatters eyes around the art, never on top of or underneath a piece.
 export function buildEyes(pieces) {
   if (!pieces.length) return [];
@@ -88,13 +110,7 @@ export function buildEyes(pieces) {
     y2: p.y + p.w * 1.3 + EYE_ART_MARGIN,
   }));
 
-  const area = {
-    x1: Math.min(...art.map((b) => b.x1)) - CELL * 1.6,
-    x2: Math.max(...art.map((b) => b.x2)) + CELL * 1.6,
-    y1: Math.min(...art.map((b) => b.y1)) - CELL * 0.6,
-    y2: Math.max(...art.map((b) => b.y2)) + CELL * 0.6,
-  };
-
+  const area = eyeArea(art);
   const eyes = [];
   for (let tries = 0; tries < EYE_COUNT * 60 && eyes.length < EYE_COUNT; tries++) {
     const size = 70 + r() * 160;

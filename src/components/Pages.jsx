@@ -1,5 +1,7 @@
 import { ARTIST } from "../artist.js";
 
+const shops = ARTIST.links.filter((link) => link.label === "Patreon" || link.label === "Etsy");
+
 const year = new Date().getFullYear();
 
 export function Copyright() {
@@ -48,8 +50,15 @@ export function ArtPage({ piece, onBack }) {
               </div>
             ))}
           </dl>
+          <div className="shops">
+            {shops.map((shop) => (
+              <a key={shop.label} className="buy" href={shop.url} target="_blank" rel="noopener noreferrer">
+                {shop.label} →
+              </a>
+            ))}
+          </div>
           {meta.link && (
-            <a className="buy" href={meta.link} target="_blank" rel="noreferrer">
+            <a className="buy" href={meta.link} target="_blank" rel="noopener noreferrer">
               get it →
             </a>
           )}

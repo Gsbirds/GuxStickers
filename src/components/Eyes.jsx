@@ -45,7 +45,12 @@ export default function Eyes({ eyes, mouse, view, paused }) {
       }}
     >
       <div className={e.slit ? "iris slit" : "iris"}>
-        <div className="pupil" ref={(el) => (pupils.current[i] = el)} />
+        <div
+          className="pupil"
+          ref={(el) => {
+            pupils.current[i] = el;
+          }}
+        />
       </div>
     </div>
   ));
