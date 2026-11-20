@@ -3,6 +3,6 @@ import react from "@vitejs/plugin-react";
 import { imagetools } from "vite-imagetools";
 
 export default defineConfig({
-  base: "/art-for-pie/",
+  base: "/GuxStickers/",
   plugins: [react(), imagetools()],
 });
