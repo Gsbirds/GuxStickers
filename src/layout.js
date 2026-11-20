@@ -30,9 +30,10 @@ function rng(seed) {
   };
 }
 
-// Roughly twice as many columns as rows.
+const COLUMNS = 7;
+
 function gridColumns(n) {
-  return Math.max(1, Math.min(n, Math.ceil(Math.sqrt(n * 2.2))));
+  return Math.max(1, Math.min(n, COLUMNS));
 }
 
 export function loadPieces() {

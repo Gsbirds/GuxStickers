@@ -4,9 +4,9 @@ import { artBounds, buildEyes, loadPieces, roamBounds } from "./layout.js";
 import Eyes from "./components/Eyes.jsx";
 import { AboutPage, ArtPage, Copyright } from "./components/Pages.jsx";
 
-const MIN_ZOOM = 0.25;
+const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 2.5;
-const MIN_START_ZOOM = 0.4;
+const MIN_START_ZOOM = 0.15;
 const DRAG_THRESHOLD = 6;
 const PARALLAX = 0.15;
 
@@ -26,7 +26,7 @@ function fitView(pieces) {
   const bh = b.y2 - b.y1;
   const W = window.innerWidth;
   const H = window.innerHeight;
-  const z = Math.min(1, Math.max(MIN_START_ZOOM, Math.min((W * 0.9) / bw, (H * 0.82) / bh)));
+  const z = Math.min(1, Math.max(MIN_START_ZOOM, Math.min((W * 0.94) / bw, (H * 0.8) / bh)));
   return {
     z,
     x: W / 2 - (b.x1 + bw / 2) * z,
